@@ -1,18 +1,31 @@
 import os
 
-DATA_DIRECTORY = '/home/ubuntu/pyproject/imdb/imdb_data'
+PATH_SCRAPY_TOOL = '/home/guijideanhao/pyproject/scrapy_toolv2'
+DATA_DIRECTORY = '/home/guijideanhao/pyproject/imdb/imdb_data'
 FILEPATH_DATABASE = os.path.join(DATA_DIRECTORY,'imdb_film.db')
+FILEPATH_DATABASE2 = os.path.join(DATA_DIRECTORY,'imdb_film_for_title.db')
 PATH_FILMLIST_TEMP = os.path.join(DATA_DIRECTORY,'filmlist_temp')
 if not os.path.exists(PATH_FILMLIST_TEMP):
     os.makedirs(PATH_FILMLIST_TEMP)
 
 TABLENAME_FILMLIST = 'film_list'    
+TABLENAME_TITLE_BASIC = 'film_basic'
+TABLENAME_FILM_CREW = 'film_crew'
 
 FILEPATH_USEDURL_LI_TT = os.path.join(DATA_DIRECTORY,'used_url_li_tt.txt')
 if not os.path.exists(FILEPATH_USEDURL_LI_TT):
     with open(FILEPATH_USEDURL_LI_TT,'a+') as f:
         f.write(' ,')
-
+FILEPATH_USEDURL_TITLE = os.path.join(DATA_DIRECTORY, 'used_url_title.txt')
+if not os.path.exists(FILEPATH_USEDURL_TITLE):
+    with open(FILEPATH_USEDURL_TITLE,'a+') as f:
+        f.write(' ,')
+FILEPATH_ERROR_TITLE = os.path.join(DATA_DIRECTORY, 'error_url_title.txt')
+if not os.path.exists(FILEPATH_ERROR_TITLE):
+    with open(FILEPATH_ERROR_TITLE,'a+') as f:
+        f.write(' ,')
+        
+        
 domain_url = 'https://www.imdb.com/'
 genre_url_list = [
     'https://www.imdb.com/search/title?genres=action&title_type=feature&explore=genres&pf_rd_m=A2FGELUUNOQJNL&pf_rd_p=facfbd0c-6f3d-4c05-9348-22eebd58852e&pf_rd_r=0FW8EMRXJ56D9BKQDHGX&pf_rd_s=center-6&pf_rd_t=15051&pf_rd_i=genre&ref_=ft_gnr_mvpop_1',

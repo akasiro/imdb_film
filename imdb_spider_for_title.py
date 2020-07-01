@@ -1,13 +1,15 @@
 import requests,re,os,sqlite3,sys,time,json
 from bs4 import BeautifulSoup
 import pandas as pd
+import numpy as np
 from imdb_config import *
 from urllib.parse import urljoin
 sys.path.append('/home/guijideanhao/pyproject/scrapy_toolv2')
 from html_downloader import html_downloader
 
 class imdb_spider():
-    def __init__(self,dbpath=FILEPATH_DATABASE, hd=None):
+    def __init__(self,dbpath=FILEPATH_DATABASE2, hd=None):
+        self.dbpath = dbpath
         self.conn = sqlite3.connect(dbpath)
         self.cur = self.conn.cursor()
         if hd:
@@ -15,7 +17,9 @@ class imdb_spider():
         else:
             self.hd = html_downloader(china=False)
         self.filmlist_used_ttid()
-        self.used_url_li_tt = self.used_url_gen(FILEPATH_USEDURL_LI_TT)
+#         self.used_url_li_tt = self.used_url_gen(FILEPATH_USEDURL_LI_TT)
+        self.used_url_title = self.used_url_gen(FILEPATH_USEDURL_TITLE)
+        self.error_url_title = self.used_url_gen(FILEPATH_ERROR_TITLE)
     
     def used_url_gen(self, filename):
         with open(filename, 'r') as f:
@@ -106,8 +110,48 @@ class imdb_spider():
     def parse_title(self, res_content):
         soup = BeautifulSoup(res_content, 'html.parser')
         script_data = soup.find('script', {'type':'application/ld+json'})
-        dict_film_basic, df_film_crew = self.parse_title_json(script_data.get_text())
+        if script_data:
+            dict_film_basic, df_film_crew = self.parse_title_json(script_data.get_text())
+        else:
+            dict_film_basic = {}
+            df_film_crew = pd.DataFrame()
+        plot_summary = soup.find('div',{'class':'summary_text'})
+        if plot_summary:
+            dict_film_basic['plot_summary'] = plot_summary.get_text()
+            dict_film_basic['plot_summary'] = re.sub('\s\s','',dict_film_basic['plot_summary'])
+        storyline = soup.find('div', {'class': 'inline canwrap'})
+        try:
+            dict_film_basic['storyline'] = storyline.p.span.get_text()
+            dict_film_basic['storyline'] = re.sub('\s\s','',dict_film_basic['storyline'])
+        except:
+            storyline = ''
+        
+        titleDetails = soup.find('div', {'class':'article', 'id':'titleDetails'})
+        s_budget = re.search(r'Budget:</h4>["$ ]+[\d,]+',str(titleDetails))
+        if s_budget:
+            budget = s_budget.group()
+            s_budget = re.search(r'["$ ]+[\d,]+',budget)
+            dict_film_basic['budget'] = s_budget.group()
+        
+        s_open_weekend_usa = re.search(r'Opening Weekend USA:</h4>["$ ]+[\d,]+',str(titleDetails))
+        if s_open_weekend_usa:
+            open_weekend_usa = s_open_weekend_usa.group()
+            s_open_weekend_usa = re.search(r'["$ ]+[\d,]+',open_weekend_usa)
+            dict_film_basic['open_weekend_usa'] = s_open_weekend_usa.group()
+        
+        s_gross_usa = re.search(r'Gross USA:</h4>["$ ]+[\d,]+', str(titleDetails))
+        if s_gross_usa:
+            gross_usa = s_gross_usa.group()
+            s_gross_usa = re.search(r'["$ ]+[\d,]+',gross_usa)
+            dict_film_basic['gross_usa'] = s_gross_usa.group()
+        
+        s_cumulative_worldwide_gross = re.search(r'Cumulative Worldwide Gross:</h4>["$ ]+[\d,]+', str(titleDetails))
+        if s_cumulative_worldwide_gross:
+            cumulative_worldwide_gross = s_cumulative_worldwide_gross.group()
+            s_cumulative_worldwide_gross = re.search(r'["$ ]+[\d,]+',cumulative_worldwide_gross)
+            dict_film_basic['cumulative_worldwide_gross'] = s_cumulative_worldwide_gross.group()
         return dict_film_basic, df_film_crew
+    
     def parse_title_json(self, json_str):
         dict_film_basic = {}
         tmp_dict = json.loads(json_str)
@@ -117,6 +161,8 @@ class imdb_spider():
         dict_film_basic['ttid'] = film_id
         dict_film_basic['name'] = tmp_dict.get('name')
         dict_film_basic['genre'] = tmp_dict.get('genre')
+        if dict_film_basic['genre']:
+            dict_film_basic['genre'] = str(dict_film_basic['genre'])
         dict_film_basic['contentRating'] = tmp_dict.get('contentRating')
         dict_film_basic['description'] = tmp_dict.get('description')
         dict_film_basic['datePublished'] = tmp_dict.get('datePublished')
@@ -167,9 +213,67 @@ class imdb_spider():
             for k in i.keys():
                 dict_for_pandas[k].append(i.get(k))
         df_film_crew = pd.DataFrame(dict_for_pandas)
-        
         return dict_film_basic, df_film_crew
+    def scrape_title(self, title_url):
+        title_url = urljoin(domain_url, title_url)
+        if title_url in self.used_url_title:
+            return False
+        response = self.hd.request_proxy(title_url)
+        if response:
+            dict_film_basic, df_film_crew = self.parse_title(response.content)
+            df_film_basic = self.save_title_basic(dict_film_basic)
             
+            df_film_crew.to_sql(name=TABLENAME_FILM_CREW,con=self.conn,if_exists='append',index=False)
+            self.used_url_add(title_url, self.used_url_title, FILEPATH_USEDURL_TITLE)
+            return df_film_basic, df_film_crew
+        else:
+            self.used_url_add(title_url, self.error_url_title, FILEPATH_ERROR_TITLE)
+            print('ERROR: {}'.format(title_url))
+            return False
+    def save_title_basic(self, dict_film_basic, to_db=True, table_name=TABLENAME_TITLE_BASIC):
+        dict_for_pandas = {'ttid':[],'name':[], 'title_url':[], 'genre':[],
+                          'contentRating':[],'datePublished':[],
+                          'ratingCount':[], 'bestRating':[], 'worstRating':[], 'ratingValue':[],
+                          'budget':[], 'open_weekend_usa':[], 'gross_usa':[], 'cumulative_worldwide_gross':[],
+                          'description':[], 'keywords':[], 'plot_summary':[], 'storyline':[]}
+        for k in dict_for_pandas.keys():
+            dict_for_pandas[k].append(dict_film_basic.get(k))
+        df_film_basic = pd.DataFrame(dict_for_pandas)
+        if to_db:
+            df_film_basic.to_sql(name=table_name,con=self.conn,if_exists='append',index=False)
+        return df_film_basic
+    def scrape_title_list(self, urllist, teststop=-1):
+        for i in urllist:
+            if teststop==0:
+                print('test end')
+                return
+            if self.scrape_title(i):
+                if teststop>0:
+                    teststop = teststop-1
+                time.sleep(1)
+        print('mission complete')
+            
+# # scrape list          
+# if __name__ == "__main__":
+#     sp = imdb_spider()
+#     sp.scrapy_li_tt_all()
+
+# scrape title
 if __name__ == "__main__":
     sp = imdb_spider()
-    sp.scrapy_li_tt_all()
+    conn = sqlite3.connect(FILEPATH_DATABASE)
+    cur = conn.cursor()
+    df1 = pd.read_sql('select * from {}'.format(TABLENAME_FILMLIST), conn)
+    
+    def year_to_int(value):
+        s_tmp = re.search(r'\d+',value)
+        if s_tmp:
+            tmp = s_tmp.group()
+            tmp = np.int(tmp)
+        else:
+            tmp = np.nan
+        return tmp
+    df1['year'] = df1['year'].apply(year_to_int)
+    df1 = df1[(df1['year']>2000) & (df1['year']<2019)]
+    title_urls = df1['url'].values.tolist()
+    sp.scrape_title_list(title_urls)
