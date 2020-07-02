@@ -173,45 +173,50 @@ class imdb_spider():
             dict_film_basic['bestRating'] = agg_rating.get('bestRating')
             dict_film_basic['worstRating'] = agg_rating.get('worstRating')
             dict_film_basic['ratingValue'] = agg_rating.get('ratingValue')
-        list_film_multi = []
-        actors = tmp_dict.get('actor')
-        if actors:
-            for i in actors:
-                tmp = {}
-                tmp['ttid'] = film_id
-                tmp['film_name'] = tmp_dict.get('name')
-                tmp['type'] = 'actor'
-                tmp['person_name'] = i.get('name')
-                tmp['person_url'] = i.get('url')
-                list_film_multi.append(tmp)
-        directors = tmp_dict.get('director')
-        if directors:
-            if type(directors) == dict:
-                directors = [directors]
-            for i in directors:
-                tmp = {}
-                tmp['ttid'] = film_id
-                tmp['film_name'] = tmp_dict.get('name')
-                tmp['type'] = 'director'
-                tmp['person_name'] = i.get('name')
-                tmp['person_url'] = i.get('url')
-                list_film_multi.append(tmp)
-        creators = tmp_dict.get('creator')
-        if creators:
-            if type(creators) == dict:
-                directors = [directors]
-            for i in creators:
-                tmp = {}
-                tmp['ttid'] = film_id
-                tmp['film_name'] = tmp_dict.get('name')
-                tmp['type'] = 'creator'
-                tmp['person_name'] = i.get('name')
-                tmp['person_url'] = i.get('url')
-                list_film_multi.append(tmp)
         dict_for_pandas = {'ttid':[], 'film_name':[], 'type':[], 'person_name':[], 'person_url':[]}
-        for i in list_film_multi:
-            for k in i.keys():
-                dict_for_pandas[k].append(i.get(k))
+        list_film_multi = []
+        try:
+            actors = tmp_dict.get('actor')
+            if actors:
+                for i in actors:
+                    tmp = {}
+                    tmp['ttid'] = film_id
+                    tmp['film_name'] = tmp_dict.get('name')
+                    tmp['type'] = 'actor'
+                    tmp['person_name'] = i.get('name')
+                    tmp['person_url'] = i.get('url')
+                    list_film_multi.append(tmp)
+            directors = tmp_dict.get('director')
+            if directors:
+                if type(directors) == dict:
+                    directors = [directors]
+                for i in directors:
+                    tmp = {}
+                    tmp['ttid'] = film_id
+                    tmp['film_name'] = tmp_dict.get('name')
+                    tmp['type'] = 'director'
+                    tmp['person_name'] = i.get('name')
+                    tmp['person_url'] = i.get('url')
+                    list_film_multi.append(tmp)
+            creators = tmp_dict.get('creator')
+            if creators:
+                if type(creators) == dict:
+                    directors = [directors]
+                for i in creators:
+                    tmp = {}
+                    tmp['ttid'] = film_id
+                    tmp['film_name'] = tmp_dict.get('name')
+                    tmp['type'] = 'creator'
+                    tmp['person_name'] = i.get('name')
+                    tmp['person_url'] = i.get('url')
+                    list_film_multi.append(tmp)
+
+            for i in list_film_multi:
+                for k in i.keys():
+                    dict_for_pandas[k].append(i.get(k))
+        except:
+            self.used_url_add(tmp_dict.get('url'), self.error_url_title, FILEPATH_ERROR_TITLE)
+            print("ERROR: {}".format(tmp_dict.get('url')))
         df_film_crew = pd.DataFrame(dict_for_pandas)
         return dict_film_basic, df_film_crew
     def scrape_title(self, title_url):

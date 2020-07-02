@@ -11,7 +11,7 @@ if not os.path.exists(PATH_FILMLIST_TEMP):
 TABLENAME_FILMLIST = 'film_list'    
 TABLENAME_TITLE_BASIC = 'film_basic'
 TABLENAME_FILM_CREW = 'film_crew'
-
+TABLENAME_FILE_CONNECTIONS = 'film_connections'
 FILEPATH_USEDURL_LI_TT = os.path.join(DATA_DIRECTORY,'used_url_li_tt.txt')
 if not os.path.exists(FILEPATH_USEDURL_LI_TT):
     with open(FILEPATH_USEDURL_LI_TT,'a+') as f:
@@ -23,6 +23,14 @@ if not os.path.exists(FILEPATH_USEDURL_TITLE):
 FILEPATH_ERROR_TITLE = os.path.join(DATA_DIRECTORY, 'error_url_title.txt')
 if not os.path.exists(FILEPATH_ERROR_TITLE):
     with open(FILEPATH_ERROR_TITLE,'a+') as f:
+        f.write(' ,')
+FILEPATH_USEDTTID_CONNECTION = os.path.join(DATA_DIRECTORY, 'used_ttid_connection.txt')
+if not os.path.exists(FILEPATH_USEDTTID_CONNECTION):
+    with open(FILEPATH_USEDTTID_CONNECTION, 'a+') as f:
+        f.write(' ,')
+FILEPATH_ERRORTTID_CONNECTION = os.path.join(DATA_DIRECTORY, 'error_ttid_connection.txt')
+if not os.path.exists(FILEPATH_ERRORTTID_CONNECTION):
+    with open(FILEPATH_ERRORTTID_CONNECTION, 'a+') as f:
         f.write(' ,')
         
         
