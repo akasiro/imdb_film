@@ -4,6 +4,7 @@ PATH_SCRAPY_TOOL = '/home/guijideanhao/pyproject/scrapy_toolv2'
 DATA_DIRECTORY = '/home/guijideanhao/pyproject/imdb/imdb_data'
 FILEPATH_DATABASE = os.path.join(DATA_DIRECTORY,'imdb_film.db')
 FILEPATH_DATABASE2 = os.path.join(DATA_DIRECTORY,'imdb_film_for_title.db')
+FILEPATH_DATABASE3 = os.path.join(DATA_DIRECTORY,'imdb_film_for_credit.db')
 PATH_FILMLIST_TEMP = os.path.join(DATA_DIRECTORY,'filmlist_temp')
 if not os.path.exists(PATH_FILMLIST_TEMP):
     os.makedirs(PATH_FILMLIST_TEMP)
@@ -12,6 +13,7 @@ TABLENAME_FILMLIST = 'film_list'
 TABLENAME_TITLE_BASIC = 'film_basic'
 TABLENAME_FILM_CREW = 'film_crew'
 TABLENAME_FILE_CONNECTIONS = 'film_connections'
+TABLENAME_FILE_COMPANYCREDIT = 'company_credit'
 FILEPATH_USEDURL_LI_TT = os.path.join(DATA_DIRECTORY,'used_url_li_tt.txt')
 if not os.path.exists(FILEPATH_USEDURL_LI_TT):
     with open(FILEPATH_USEDURL_LI_TT,'a+') as f:
@@ -32,7 +34,8 @@ FILEPATH_ERRORTTID_CONNECTION = os.path.join(DATA_DIRECTORY, 'error_ttid_connect
 if not os.path.exists(FILEPATH_ERRORTTID_CONNECTION):
     with open(FILEPATH_ERRORTTID_CONNECTION, 'a+') as f:
         f.write(' ,')
-        
+
+FILEPATH_LOGFILE_COMPANY_CREDIT = os.path.join(DATA_DIRECTORY, 'log_company_credit.txt')        
         
 domain_url = 'https://www.imdb.com/'
 genre_url_list = [

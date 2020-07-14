@@ -1,6 +1,7 @@
 nohup: ignoring input
-the len of list: 78
-the len of list: 190
-ERROR: tt2762662
-2020-07-05 20:18:15  ERROR  log  tt2762662
+the len of list: 873
+the len of list: 364
+2020-07-09 05:15:45  SUCCESS  no data  tt8092888
+2020-07-09 05:16:16  SUCCESS  notype  tt8969332
+2020-07-09 05:16:46  ERROR  log  tt8342862
 mission complete

@@ -4,3 +4,5 @@ FILE_DABABASE = '/home/guijideanhao/pyproject/imdb/imdb_data/imdb_pro.db'
 
 FILE_COOKIES = 'cookies.txt'
 FILE_HEADERS = 'headers.txt'
+
+PATH_BOXOFFICE_HTML = '/home/guijideanhao/pyproject/imdb/imdb_data/boxoffice'

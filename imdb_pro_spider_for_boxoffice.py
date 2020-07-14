@@ -23,14 +23,16 @@ class imdb_pro_spider():
         table_name (str): the table save box office
         db_path (str): the path of database
         conn (object): the sqlite3 connection object
+        html_dir (str): directory to save html that cannot be parse or save
     '''
-    def __init__(self, cookies_file, headers_file,table_name, db_path, log_filepath='imdb_pro.txt'):
+    def __init__(self, cookies_file, headers_file,table_name, db_path,html_dir=PATH_BOXOFFICE_HTML, log_filepath='imdb_pro.txt'):
         '''
         Args:
             cookies_file (str): full cookies_file path in txt format
             headers_file (str): full headers_file path in txt format
             table_name (str): the table save box office
             db_path (str): the path of database
+            html_dir (str): directory to save html that cannot be parse or save
             log_filepath (str): full path of log file
         '''
         self.cookies = self.gen_cookies(cookies_file)
@@ -44,6 +46,8 @@ class imdb_pro_spider():
         self.table_name = table_name
         self.db_path = db_path
         self.conn = sqlite3.connect(self.db_path)
+        
+        self.html_dir = html_dir
         
     def gen_cookies(self, cookies_file):
         '''
@@ -77,20 +81,20 @@ class imdb_pro_spider():
                 headers[name] = value.strip()
         headers['Referer'] = 'https://pro.imdb.com/title/{}/boxoffice'.format(ttid)
         return headers
-    def download_page(self, ttid):
+    def download_page(self, ttid, **kwargs):
         '''
         download html page
         
         Args:
             ttid (str): film ttid
-        
+            **kwargs (dict): requests param
         Returns:
             None or Response object: if fail return None, else response object
 
         '''
         url = 'https://pro.imdb.com/title/{}/boxoffice/_ajax'.format(ttid)
         headers = self.gen_headers(self.headers_file,ttid)
-        res = self.session.get(url=url, cookies=self.cookies, headers=headers)
+        res = self.session.get(url=url, cookies=self.cookies, headers=headers, **kwargs)
         if res.status_code == 200:
             return res
         else:
@@ -107,27 +111,23 @@ class imdb_pro_spider():
             bool: True if successfully gain data
             df: if gain data return data
             
-        to do:
-            * add a empty list
-            * add a used list
-            * add an error list
         '''
         soup = BeautifulSoup(res_content, 'html.parser')
         empty_table = soup.find('span', {'class':'empty_mojo_table'})
         box_office_mojo = soup.find('table', {'id':'box_office_mojo'})
+        box_office_details = soup.find('div', {'id':'box_office_details'})
         if empty_table:
             self.log_manager.write_log(info=ttid,info_type='no data',add_to_list=self.success_ttid)
             return True,
         elif not box_office_mojo:
-            # todo
-            # add a list of error print add to list function
-            print('ERROR: {}'.format(ttid))
-            self.log_manager.write_log(info=ttid,info_type='log',success=False)
-            return False,
+            if box_office_details:
+                self.log_manager.write_log(info=ttid,info_type='no data',add_to_list=self.success_ttid)
+                return True,
+            else:
+                self.log_manager.write_log(info=ttid,info_type='log',success=False)
+                return False,
         else:
             df = self.parse_table_boxoffice(box_office_mojo, ttid)
-            # todo
-            # add a list of used ttid print congratulation
             return True, df
             
     def parse_table_boxoffice(self, box_office_mojo, ttid):
@@ -184,12 +184,13 @@ class imdb_pro_spider():
         df['ttid'] = ttid
         df = df[rearrange_col]
         return df
-    def parse_save_ttid_list(self, list_ttid, teststop=-1):
+    def parse_save_ttid_list(self, list_ttid, teststop=-1, **kwargs):
         '''
         parse and save
         Args:
             list_ttid (list)
             teststop (int): for text
+            **kwargs (dict): request param
         '''
         for i in list_ttid:
             if teststop == 0:
@@ -200,7 +201,7 @@ class imdb_pro_spider():
                 continue
             # download page
             try:
-                res = self.download_page(i)
+                res = self.download_page(i, **kwargs)
                 if res == None:
                     self.log_manager.write_log(success=False, info_type='server forbid', info=i, add_to_list=self.error_ttid)
                     break
@@ -212,12 +213,15 @@ class imdb_pro_spider():
                 success,*df = self.parse_page_boxoffice(res.content, i)
                 if success:
                     if df == []:
-                        time.sleep(60)
+                        time.sleep(30)
                         continue
                 else:
                     break
             except:
                 self.log_manager.write_log(info=i, success=False, info_type='parse_unknown',add_to_list=self.error_ttid)
+                with open(os.path.join(self.html_dir,'boxoffice_{}.html'.format(i)),'wb+') as f:
+                    f.write(res.content)
+                time.sleep(30)
                 continue
                 
             # save df
@@ -226,10 +230,12 @@ class imdb_pro_spider():
                 self.log_manager.write_log(info=i, add_to_list=self.success_ttid)
                 if teststop>0:
                     teststop = teststop -1
-                time.sleep(60)
+                time.sleep(30)
             except:
                 self.log_manager.write_log(info=i, success=False, info_type='db', add_to_list=self.error_ttid)
-                time.sleep(60)
+                with open(os.path.join(self.html_dir,'boxoffice_{}.html'.format(i)),'wb+') as f:
+                    f.write(res.content)
+                time.sleep(30)
                 continue
         print('mission complete')
                 
@@ -250,5 +256,11 @@ if __name__ == '__main__':
     df1 = df1[df1['year']==2018]
     ttids = df1['ttid'].values.tolist()
     
+
     test = imdb_pro_spider(cookies_file=FILE_COOKIES,headers_file=FILE_HEADERS,table_name=TABLE_NAME_BOXOFFICE,db_path=FILE_DABABASE)
-    test.parse_save_ttid_list(ttids)
+    
+    
+    hd = html_downloader(china=False)
+    findproxy = hd.request_proxy('https://www.imdb.com/')
+    proxy= hd.ip2proxies(hd.ip_buffer.pop())
+    test.parse_save_ttid_list(ttids) #, proxies=proxy)
